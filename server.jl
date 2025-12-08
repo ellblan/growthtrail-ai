@@ -12,5 +12,5 @@ end
 
 HTTP.register!(ROUTER, "POST", "/predict", predict)
 
-print("GrowthTrail AI Server starting on port 10000...")
-HTTP.serve(ROUTER, 10000)
+print("GrowthTrail AI Server starting on 0.0.0.0:10000...")
+HTTP.serve(ROUTER, 10000, "0.0.0.0")
