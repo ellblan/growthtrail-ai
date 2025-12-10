@@ -1,21 +1,54 @@
-# GrowthTrail AI 🚀
-Julia + Flux.jlで日記→ビジネススキル自動抽出
+# GrowthTrail AI
 
-## デモ（近日公開）
-\`\`\`bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"text":"毎日コード書く習慣が身についた"}'
-\`\`\`
+Julia + Flux.jl で、習慣・技術・ビジネスの成長度をスコアリングするシンプルな機械学習API。
+※現在MVPとして開発中
 
-## 結果例
-習慣:0.52, 技術:0.52, ビジネス:0.51
+## プロジェクト概要
+
+GrowthTrail AI は、Julia と Flux.jl を用いて、自己評価やテキスト入力などから「習慣」「技術」「ビジネス」の3軸の成長スコアを推定するAPIです。 
+学習用の軽量モデルをバックエンドとして、JSON形式の入力を受け取り、成長指標をJSONで返します。
 
 ## 技術スタック
-- Julia 1.11 + Flux.jl
-- Ubuntu/Linux最適化
-- 1週間MVP実績（Day1完了）
-## 🚀 GrowthTrail AI API (Live!)
+
+- Julia 1.11
+- Flux.jl（機械学習モデル）
+- HTTP.jl（REST APIサーバ）
+- JSON3.jl（JSONエンコード/デコード）
+- Ubuntu/Linux
+- Render.com（本番デプロイ）
+
+## Live API（本番環境）
 
 **POST** `https://growthtrail-ai.onrender.com/predict`
-**Day3成果**: Flux.jl + HTTP.jl + Render.com 無料デプロイ成功！
+
+- Request / Response は JSON 形式 
+- Day3 時点で、Flux.jl + HTTP.jl + Render.com の無料デプロイまで完了しています。
+
+## curl での利用例（本番）
+
+```bash
+curl -X POST https://growthtrail-ai.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d '{"習慣":0.49,"技術":0.41,"ビジネス":0.4}'
+
+
+## 想定されるレスポンス例（イメージ）:
+
+{
+"習慣成長": 0.52,
+"技術成長": 0.30,
+"ビジネス成長": 0.18
+}
+
+## ローカル開発用デモ（テキスト入力）
+
+```bash
+curl -X POST http://localhost:8000/predict
+-H "Content-Type: application/json"
+-d '{"text":"毎日コード書く習慣が身についた"}'
+
+## 結果例（イメージ）:
+
+- 習慣: 0.52 
+- 技術: 0.52 
+- ビジネス: 0.51
