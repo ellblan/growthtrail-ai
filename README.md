@@ -30,7 +30,7 @@ GrowthTrail AI は、Julia と Flux.jl を用いて、自己評価やテキス�
 curl -X POST https://growthtrail-ai.onrender.com/predict \
   -H "Content-Type: application/json" \
   -d '{"習慣":0.49,"技術":0.41,"ビジネス":0.4}'
-
+```
 
 ## 想定されるレスポンス例（イメージ）:
 
@@ -46,6 +46,7 @@ curl -X POST https://growthtrail-ai.onrender.com/predict \
 curl -X POST http://localhost:8000/predict
 -H "Content-Type: application/json"
 -d '{"text":"毎日コード書く習慣が身についた"}'
+```
 
 ## 結果例（イメージ）:
 
