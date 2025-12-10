@@ -10,7 +10,13 @@ function predict(req::HTTP.Request)
     return HTTP.Response(200, JSON3.write(resp))
 end
 
+function health(req::HTTP.Request)
+    body = JSON3.write(Dict("status" => "ok"))
+    return HTTP.Response(200, body)
+end
+
 HTTP.register!(ROUTER, "POST", "/predict", predict)
+HTTP.register!(ROUTER, "GET",  "/health",  health)
 
 print("GrowthTrail AI Server starting on 0.0.0.0:10000...")
 HTTP.serve(ROUTER, "0.0.0.0", 10000)
