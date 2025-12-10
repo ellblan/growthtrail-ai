@@ -24,6 +24,11 @@ GrowthTrail AI は、Julia と Flux.jl を用いて、自己評価やテキス�
 - Request / Response は JSON 形式 
 - Day3 時点で、Flux.jl + HTTP.jl + Render.com の無料デプロイまで完了しています。
 
+## エンドポイント一覧
+
+- GET `/health` : 稼働確認用のヘルスチェック（`{"status":"ok"}` を返す）
+- POST `/predict` : 習慣・技術・ビジネスの自己評価スコアから成長度を推定する
+
 ## curl での利用例（本番）
 
 ```bash
