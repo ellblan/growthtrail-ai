@@ -1,12 +1,24 @@
-using HTTP, JSON3
+using HTTP, JSON3, Flux 
+
+const GROWTH_MODEL = Chain(
+    Dense(3, 8, relu),
+    Dense(8, 3),
+    softmax
+)
 
 const ROUTER = HTTP.Router()
 
 function predict(req::HTTP.Request)
     data = JSON3.read(req.body)
-    resp = Dict("習慣"=>round(rand()*0.1+0.4; digits=2), 
-                "技術"=>round(rand()*0.1+0.4; digits=2), 
-                "ビジネス"=>round(rand()*0.1+0.4; digits=2))
+    inputs = Float32[data["習慣"], data["技術"], data["ビジネス"]]
+    
+    predictions = GROWTH_MODEL(inputs)
+    
+    resp = Dict(
+        "習慣成長"   => round(predictions[1], digits=2),
+        "技術成長"   => round(predictions[2], digits=2),
+        "ビジネス成長" => round(predictions[3], digits=2)
+    )
     return HTTP.Response(200, JSON3.write(resp))
 end
 
