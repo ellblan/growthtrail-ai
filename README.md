@@ -64,3 +64,4 @@ curl -X POST http://localhost:8000/predict
 - 習慣: 0.52 
 - 技術: 0.52 
 - ビジネス: 0.51
+
