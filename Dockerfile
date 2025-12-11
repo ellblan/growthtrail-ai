@@ -1,11 +1,15 @@
 FROM julia:1.11
 
-# アプリ一式をコピー（Project.toml/Manifest.toml/server.jl など）
 WORKDIR /app
-COPY . .
+
+# まず依存定義だけコピー
+COPY Project.toml Manifest.toml ./
 
 # プロジェクト環境に従ってパッケージをインストール
 RUN julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+# 残りのソースをコピー
+COPY . .
 
 EXPOSE 10000
 
