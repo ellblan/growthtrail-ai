@@ -1,0 +1,3 @@
+.git
+*.jl.*
+__pycache__
