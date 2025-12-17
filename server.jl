@@ -1,14 +1,8 @@
-using HTTP
-using JSON3
-using Flux
-using Random
-using Dates
+# server.jl（純粋スタンドアロン版）
+using HTTP, JSON3, Flux, Random, Dates
 
-println("✓ Core packages loaded (no Pkg.instantiate)")
+println("✓ Pure Julia startup - no Pkg involved")
 
-# ==============================
-# モデル定義と初期化
-# ==============================
 Random.seed!(1234)
 
 GROWTH_MODEL = Chain(
@@ -17,83 +11,58 @@ GROWTH_MODEL = Chain(
     softmax
 )
 
-const MODEL_INFO = Dict(
+MODEL_INFO = Dict(
     "name" => "growthtrail_mlp_v1",
-    "version" => "0.2.0",
-    "created_at" => string(now())
+    "version" => "0.2.0"
 )
 
-println("✓ GrowthTrail AI model initialized v$(MODEL_INFO["version"])")
+println("✓ Model loaded v0.2.0")
 
-# ==============================
-# 以下既存コードそのまま
-# ==============================
 function safe_json_read(body::String)
     try
-        return JSON3.read(body)
-    catch e
-        @warn "Invalid JSON input" exception=(e, catch_backtrace())
-        return nothing
+        JSON3.read(body)
+    catch
+        nothing
     end
 end
 
-function predict_growth(inputs::AbstractVector{<:Real})
+function predict_growth(inputs)
     x = reshape(Float32.(inputs), :, 1)
-    y = GROWTH_MODEL(x)
-    return vec(y)
+    vec(GROWTH_MODEL(x))
 end
 
-function handle_predict(req::HTTP.Request)
+function handle_predict(req)
     data = safe_json_read(String(req.body))
-    if data === nothing
-        return HTTP.Response(400, JSON3.write(Dict("error"=>"Invalid JSON")))
-    end
-
-    if !haskey(data, "習慣") || !haskey(data, "技術") || !haskey(data, "ビジネス")
-        return HTTP.Response(400, JSON3.write(Dict("error"=>"Missing input keys: 習慣, 技術, ビジネス")))
-    end
-
+    data === nothing && return HTTP.Response(400, """{"error":"Invalid JSON"}""")
+    
+    haskey(data, "習慣") || haskey(data, "技術") || haskey(data, "ビジネス") || 
+        return HTTP.Response(400, """{"error":"Missing keys"}""")
+    
     input_vec = Float32[data["習慣"], data["技術"], data["ビジネス"]]
     preds = predict_growth(input_vec)
-
+    
     result = Dict(
-        "習慣成長" => round(Float64(preds[1]); digits=2),
-        "技術成長" => round(Float64(preds[2]); digits=2),
-        "ビジネス成長" => round(Float64(preds[3]); digits=2)
+        "習慣成長" => round(preds[1], digits=2),
+        "技術成長" => round(preds[2], digits=2),
+        "ビジネス成長" => round(preds[3], digits=2)
     )
-
-    resp = Dict(
-        "meta" => Dict(
-            "model" => MODEL_INFO["name"],
-            "version" => MODEL_INFO["version"],
-            "timestamp" => string(now())
-        ),
-        "result" => result
-    )
-
-    return HTTP.Response(200, JSON3.write(resp))
+    
+    resp = Dict("result" => result, "version" => "0.2.0")
+    HTTP.Response(200, JSON3.write(resp))
 end
 
-function handle_health(_req::HTTP.Request)
-    resp = Dict(
-        "status" => "GrowthTrail AI v$(MODEL_INFO["version"]) - Pkg-free",
-        "model" => MODEL_INFO["name"],
-        "timestamp" => string(now())
-    )
-    return HTTP.Response(200, JSON3.write(resp))
-end
+handle_health(_req) = HTTP.Response(200, """{"status":"GrowthTrail AI v0.2.0","timestamp":"$(now())"}""")
 
-function route(req::HTTP.Request)
+route(req::HTTP.Request) = begin
     if req.target == "/predict" && req.method == "POST"
-        return handle_predict(req)
+        handle_predict(req)
     elseif req.target == "/health" && req.method == "GET"
-        return handle_health(req)
+        handle_health(req)
     else
-        return HTTP.Response(404, "Not found")
+        HTTP.Response(404, "Not found")
     end
 end
 
-# Renderポート対応
-const PORT = parse(Int, get(ENV, "PORT", "10000"))
-println("Starting GrowthTrail AI server v$(MODEL_INFO["version"]) on 0.0.0.0:$PORT (Pkg-free mode)...")
+PORT = parse(Int, get(ENV, "PORT", "10000"))
+println("Starting GrowthTrail AI v0.2.0 on 0.0.0.0:$PORT")
 HTTP.serve(route, "0.0.0.0", PORT)
