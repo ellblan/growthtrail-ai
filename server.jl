@@ -1,21 +1,10 @@
-# ==============================
-# Render対応：起動時依存解決（ビルド時回避）
-# ==============================
-try
-    using Pkg
-    Pkg.instantiate()
-    println("✓ Pkg.instantiate() COMPLETED at startup")
-catch e
-    @warn "Pkg.instantiate() skipped at startup" exception=(e, catch_backtrace())
-end
-
 using HTTP
 using JSON3
 using Flux
 using Random
 using Dates
 
-println("✓ All dependencies loaded successfully")
+println("✓ Core packages loaded (no Pkg.instantiate)")
 
 # ==============================
 # モデル定義と初期化
@@ -37,7 +26,7 @@ const MODEL_INFO = Dict(
 println("✓ GrowthTrail AI model initialized v$(MODEL_INFO["version"])")
 
 # ==============================
-# 以下は既存コードそのまま
+# 以下既存コードそのまま
 # ==============================
 function safe_json_read(body::String)
     try
@@ -86,12 +75,10 @@ function handle_predict(req::HTTP.Request)
 end
 
 function handle_health(_req::HTTP.Request)
-    uptime_sec = 0.0
     resp = Dict(
-        "status" => "GrowthTrail AI v$(MODEL_INFO["version"])",
+        "status" => "GrowthTrail AI v$(MODEL_INFO["version"]) - Pkg-free",
         "model" => MODEL_INFO["name"],
-        "timestamp" => string(now()),
-        "uptime_sec" => uptime_sec
+        "timestamp" => string(now())
     )
     return HTTP.Response(200, JSON3.write(resp))
 end
@@ -106,9 +93,7 @@ function route(req::HTTP.Request)
     end
 end
 
-# ==============================
-# サーバ起動（ポート動的取得）
-# ==============================
-const PORT = parse(Int, get(ENV, "PORT", "8080"))
-println("Starting GrowthTrail AI server v$(MODEL_INFO["version"]) on 0.0.0.0:$PORT...")
+# Renderポート対応
+const PORT = parse(Int, get(ENV, "PORT", "10000"))
+println("Starting GrowthTrail AI server v$(MODEL_INFO["version"]) on 0.0.0.0:$PORT (Pkg-free mode)...")
 HTTP.serve(route, "0.0.0.0", PORT)
