@@ -1,17 +1,21 @@
+# ==============================
+# Render対応：起動時依存解決（ビルド時回避）
+# ==============================
+try
+    using Pkg
+    Pkg.instantiate()
+    println("✓ Pkg.instantiate() COMPLETED at startup")
+catch e
+    @warn "Pkg.instantiate() skipped at startup" exception=(e, catch_backtrace())
+end
+
 using HTTP
 using JSON3
 using Flux
 using Random
 using Dates
 
-function safe_json_read(body::String)
-    try
-        return JSON3.read(body)
-    catch e
-        @warn "Invalid JSON input" exception=(e, catch_backtrace())
-        return nothing
-    end
-end
+println("✓ All dependencies loaded successfully")
 
 # ==============================
 # モデル定義と初期化
@@ -30,9 +34,20 @@ const MODEL_INFO = Dict(
     "created_at" => string(now())
 )
 
+println("✓ GrowthTrail AI model initialized v$(MODEL_INFO["version"])")
+
 # ==============================
-# ユーティリティ関数
+# 以下は既存コードそのまま
 # ==============================
+function safe_json_read(body::String)
+    try
+        return JSON3.read(body)
+    catch e
+        @warn "Invalid JSON input" exception=(e, catch_backtrace())
+        return nothing
+    end
+end
+
 function predict_growth(inputs::AbstractVector{<:Real})
     x = reshape(Float32.(inputs), :, 1)
     y = GROWTH_MODEL(x)
@@ -70,14 +85,10 @@ function handle_predict(req::HTTP.Request)
     return HTTP.Response(200, JSON3.write(resp))
 end
 
-# ==============================
-# /health エンドポイント
-# ==============================
 function handle_health(_req::HTTP.Request)
     uptime_sec = 0.0
     resp = Dict(
-        "status" => "ok",
-        "version" => MODEL_INFO["version"],
+        "status" => "GrowthTrail AI v$(MODEL_INFO["version"])",
         "model" => MODEL_INFO["name"],
         "timestamp" => string(now()),
         "uptime_sec" => uptime_sec
@@ -85,9 +96,6 @@ function handle_health(_req::HTTP.Request)
     return HTTP.Response(200, JSON3.write(resp))
 end
 
-# ==============================
-# ルーティング
-# ==============================
 function route(req::HTTP.Request)
     if req.target == "/predict" && req.method == "POST"
         return handle_predict(req)
@@ -99,7 +107,8 @@ function route(req::HTTP.Request)
 end
 
 # ==============================
-# サーバ起動
+# サーバ起動（ポート動的取得）
 # ==============================
-println("Starting GrowthTrail AI server v$(MODEL_INFO["version"])...")
-HTTP.serve(route, "0.0.0.0", 8080)
+const PORT = parse(Int, get(ENV, "PORT", "8080"))
+println("Starting GrowthTrail AI server v$(MODEL_INFO["version"]) on 0.0.0.0:$PORT...")
+HTTP.serve(route, "0.0.0.0", PORT)
