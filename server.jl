@@ -1,7 +1,6 @@
-using HTTP, JSON3
+using HTTP
 
-# HTTP正統ルーター（マクロなし）
-server = HTTP.Server() do req::HTTP.Request
+HTTP.listen("0.0.0.0", 10000) do req::HTTP.Request
     if req.method == "GET" && HTTP.URI(req.target).path == "/health"
         return HTTP.Response(200, "GrowthTrail AI Live! ✓")
     elseif req.method == "POST" && HTTP.URI(req.target).path == "/predict"
@@ -14,5 +13,3 @@ server = HTTP.Server() do req::HTTP.Request
     end
     HTTP.Response(404, "Not Found")
 end
-
-HTTP.listen("0.0.0.0", 10000, server)
