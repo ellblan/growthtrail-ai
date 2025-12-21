@@ -30,6 +30,28 @@ GrowthTrail AI は、Julia と Flux.jl を用いて、自己評価やテキス�
 - Request / Response は JSON 形式 
 - Day3 時点で、Flux.jl + HTTP.jl + Render.com の無料デプロイまで完了しています。
 
+## API エンドポイント
+
+本番環境（Render）にデプロイされた GrowthTrail AI のエンドポイント:
+- ベース URL: https://growthtrail-ai.onrender.com
+
+### /predict
+
+POST /predict
+入力(JSON):
+
+```bash
+curl -X POST https://growthtrail-ai.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d '{"習慣":0.49,"技術":0.41,"ビジネス":0.4}'
+```
+
+出力例(JSON):
+
+```bash
+{"ビジネス":0.48,"習慣":0.40,"技術":0.43}
+```
+
 ## エンドポイント一覧
 
 - GET `/health` : 稼働確認用のヘルスチェック（`{"status":"ok"}` を返す）
@@ -45,11 +67,13 @@ curl -X POST https://growthtrail-ai.onrender.com/predict \
 
 ## 想定されるレスポンス例（イメージ）:
 
+```bash
 {
 "習慣成長": 0.52,
 "技術成長": 0.30,
 "ビジネス成長": 0.18
 }
+```
 
 ## ローカル開発用デモ（テキスト入力）
 
