@@ -1,16 +1,18 @@
-using Pkg
-Pkg.add("HTTP")
-Pkg.add("JSON3")
 using HTTP, JSON3
 
-HTTP.Handlers.@register route "10000" (
-    "/health" => (req) -> HTTP.Response(200, "GrowthTrail AI Live! ✓"),
-    "/predict" => (req) -> begin
+# HTTP正統ルーター（マクロなし）
+server = HTTP.Server() do req::HTTP.Request
+    if req.method == "GET" && HTTP.URI(req.target).path == "/health"
+        return HTTP.Response(200, "GrowthTrail AI Live! ✓")
+    elseif req.method == "POST" && HTTP.URI(req.target).path == "/predict"
         body = String(req.body)
-        習慣 = parse(Float64, match(r"習慣[:=](\d+\.?\d*)", body)[1].captures[1])
-        技術 = parse(Float64, match(r"技術[:=](\d+\.?\d*)", body)[1].captures[1])
-        ビジネス = parse(Float64, match(r"ビジネス[:=](\d+\.?\d*)", body)[1].captures[1])
+        習慣 = parse(Float64, match(r"習慣[:=](\d+\.?\d*)", body).captures[1])
+        技術 = parse(Float64, match(r"技術[:=](\d+\.?\d*)", body).captures[1])
+        ビジネス = parse(Float64, match(r"ビジネス[:=](\d+\.?\d*)", body).captures[1])
         score = 習慣*0.4 + 技術*0.4 + ビジネス*0.2
-        HTTP.Response(200, "{\"成長予測スコア\":$(round(score, digits=2))}")
+        return HTTP.Response(200, "{\"成長予測スコア\":$(round(score, digits=2))}")
     end
-)
+    HTTP.Response(404, "Not Found")
+end
+
+HTTP.listen("0.0.0.0", 10000, server)
