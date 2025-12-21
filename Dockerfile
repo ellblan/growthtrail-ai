@@ -1,6 +1,7 @@
 FROM julia:1.11
 WORKDIR /app
+COPY Project.toml Manifest.toml ./
+RUN julia --project=. -e 'using Pkg; Pkg.instantiate()'
 COPY server.jl .
-RUN julia -e 'using Pkg; Pkg.add(["HTTP","JSON3","Flux"])'
 EXPOSE 10000
-CMD ["julia", "server.jl"]
+CMD ["julia", "--project=.", "server.jl"]
