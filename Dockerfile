@@ -1,17 +1,18 @@
+# ベースイメージ
 FROM julia:1.11
 
-# 作業フォルダを/appに設定
+# 作業ディレクトリを指定
 WORKDIR /app
 
-# 全部のソースをコピー（app.jl, model.jl, preprocess.jlなど）
+# プロジェクト全体をコピー
 COPY . .
 
-# 依存パッケージをセットアップ（Fluxなどが含まれる）
-RUN julia -e 'using Pkg; Pkg.instantiate()'
+# 依存関係をProject.toml/Manifest.tomlから確実にインストール
+RUN julia -e 'using Pkg; Pkg.instantiate(); Pkg.precompile();'
 
-# Render用ポート
+# Render向けポート設定
 ENV PORT=10000
 EXPOSE 10000
 
-# Flux統合版を実行！
+# app.jlを起動 (Flux統合サーバ)
 CMD ["julia", "app.jl"]
