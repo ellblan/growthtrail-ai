@@ -7,11 +7,10 @@ SKILL_MAP = ["提案力", "資料作成", "顧客理解", "交渉力", "分析�
              "リーダーシップ", "コミュニケーション", "計画力", "実行力", "創造力"]
 
 function handler(req)
-    if req.method == "POST" && startswith(req.target, "/predict")
+    if req.method == "GET" && startswith(req.target, "/predict?text=")
         try
-            body_raw = String(HTTP.payload(req))  # ← これが重要！
-            data = JSON3.read(body_raw)
-            text = get(data, :text, "テスト")
+            query = HTTP.URI(req.target).query
+            text = split(query, "text=")[2]
             
             emb = text_to_embedding(text)
             scores = model(emb)
@@ -26,12 +25,12 @@ function handler(req)
             )
             return HTTP.Response(200, ["Content-Type" => "application/json"], JSON3.write(resp))
         catch e
-            return HTTP.Response(400, ["Content-Type" => "application/json"], JSON3.write(Dict("error" => string(e))))
+            return HTTP.Response(400, ["Content-Type" => "application/json"], JSON3.write(Dict("error" => "Invalid query")))
         end
     else
-        return HTTP.Response(200, "GrowthTrail AI 🚀 Ready for POST /predict")
+        return HTTP.Response(200, "GrowthTrail AI 🚀\nGET /predict?text=営業資料作成")
     end
 end
 
 HTTP.serve(handler, "0.0.0.0", 10000)
-println("🚀 GrowthTrail AI + Flux /predict ready!")
+println("🚀 GrowthTrail AI + Flux GET /predict ready!")
