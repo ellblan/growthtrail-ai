@@ -2,28 +2,21 @@ FROM julia:1.11
 
 WORKDIR /app
 
-# デバッグ：何がコピーされたか確認
-RUN echo "=== Files in context ===" && ls -la
-
-# 依存ファイル必須コピー
-COPY Project.toml ./ || echo "❌ Project.toml MISSING"
-COPY Manifest.toml ./ || echo "Manifest.toml optional"
-RUN ls -la *.toml || echo "❌ NO TOML FILES"
-
-# Pkgインストール（詳細ログ）
+# 依存ファイルのみ先にコピー（キャッシュ最適化）
+COPY Project.toml Manifest.toml ./
 RUN julia -e '\
   using Pkg; \
-  println("=== Starting Pkg.instantiate ==="); \
+  println("📦 Installing dependencies..."); \
   Pkg.instantiate(); \
+  println("✅ Dependencies ready!"); \
   Pkg.precompile(); \
-  println("=== Packages installed ==="); \
-  Pkg.status(); \
-  println("✓ SUCCESS") \
+  println("⚡ Precompiled!") \
 '
 
+# アプリケーションソース
 COPY . .
 
+# Render用設定
 ENV PORT=10000
 EXPOSE 10000
 CMD ["julia", "app.jl"]
-EOF
