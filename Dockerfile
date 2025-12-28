@@ -5,4 +5,3 @@ RUN julia -e "using Pkg; Pkg.Registry.update(); Pkg.add('HTTP'); Pkg.add('JSON3'
 ENV PORT=10000
 EXPOSE 10000
 CMD ["julia", "app.jl"]
-EOF
