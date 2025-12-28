@@ -1,17 +1,16 @@
 using HTTP
 
-# モデルロード（別スレッド）
-@async begin
-    # Fluxモデルロード処理（ここに元のコード）
-    println("Model loaded ✓")
-end
-
-HTTP.listen("0.0.0.0", 10000) do req
+server = HTTP.listen("0.0.0.0", 10000) do req::HTTP.Request
+    println("Request: ", req.method, " ", req.target)
+    
     if req.method == "GET" && startswith(req.target, "/health")
-        return HTTP.Response(200, "OK")
+        return HTTP.Response(200, ["Content-Type" => "text/plain"], "OK")
     elseif startswith(req.target, "/")
-        return HTTP.Response(200, "GrowthTrail AI Ready! 🚀")
+        return HTTP.Response(200, ["Content-Type" => "text/plain"], "GrowthTrail AI Ready! 🚀")
     else
-        return HTTP.Response(404)
+        return HTTP.Response(404, ["Content-Type" => "text/plain"], "Not Found")
     end
 end
+
+println("🚀 GrowthTrail server listening on 0.0.0.0:10000")
+wait(server) 
