@@ -1,11 +1,14 @@
+cat > server.jl << 'EOF'
 using HTTP
 
-# 1. サーバーオブジェクト取得
-server = HTTP.listen("0.0.0.0", 10000)
+function handler(req)
+    req.target == "/health" && return HTTP.Response(200, "OK")
+    HTTP.Response(404)
+end
 
-# 2. ハンドラ登録（コールバックじゃない）
-HTTP.@register server "GET /health" HTTP.Response(200, "OK")
-HTTP.@register server "GET /"       HTTP.Response(200, "Ready")
-
+server = HTTP.listen("0.0.0.0", 10000, handler)
 println("Server live!")
-wait(server)  # Serverオブジェクトを待機
+wait(server)
+EOF
+
+git add server.jl && git commit -m "Step2: HTTP.listen(port, handler)形式" && git push
