@@ -1,11 +1,11 @@
 using HTTP
 
-# Renderが即認識する最短サーバー
-HTTP.listen("0.0.0.0", 10000) do req::HTTP.Request
-    if startswith(req.target, "/health")
-        return HTTP.Response(200, ["Content-Type" => "text/plain"], "OK")
-    end
-    return HTTP.Response(200, ["Content-Type" => "text/plain"], "GrowthTrail Ready!")
-end
+# 1. サーバーオブジェクト取得
+server = HTTP.listen("0.0.0.0", 10000)
 
-println("Server started on 0.0.0.0:10000")
+# 2. ハンドラ登録（コールバックじゃない）
+HTTP.@register server "GET /health" HTTP.Response(200, "OK")
+HTTP.@register server "GET /"       HTTP.Response(200, "Ready")
+
+println("Server live!")
+wait(server)  # Serverオブジェクトを待機
