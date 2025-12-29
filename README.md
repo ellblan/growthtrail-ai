@@ -1,9 +1,16 @@
 **Julia+Flux → Render失敗記録**
 
-✅ モデル/HTTP.jl動作確認  
-❌ HTTP.listen() → main終了 → Docker停止 
+- Phase 0: Fluxモデル → "Application exited early" ❌
+- Phase 1: Starter 512MB + /health → 502 Timeout ❌  
+- Phase 2: Standard 2GB → exited early ❌
+- Phase 3: 超ミニマルserver.jl → exited early ❌
+- Phase 4: handler + wait(server) → **デプロイ中** ❌
 
-原因:「足掻いても現状だとRenderの起動・ヘルスチェックの条件をJulia側で満たせていないこと」
+原因:「Render + Julia構造的不適合」→様々試したがRenderをある程度理解でき、別の環境下で開発行うほうがいいと理解できた為。
+
+✅ PID1監視診断 → DevOps証明
+✅ HTTP.jl Task構造完全理解  
+✅ Render構造的限界特定
 
 **使用予算:$2.37 → トラブルシュートスキル習得**
 
