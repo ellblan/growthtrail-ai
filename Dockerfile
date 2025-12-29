@@ -1,4 +1,5 @@
-FROM julia:1.10-slim
+FROM julia:1.10
 WORKDIR /app
-COPY Project.toml app.jl .
+COPY . .
+RUN julia --project=. -e 'using Pkg; Pkg.instantiate()'
 CMD ["julia", "app.jl"]
