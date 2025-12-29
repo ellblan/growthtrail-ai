@@ -1,3 +1,12 @@
+**Julia+Flux → Render失敗記録**
+
+✅ モデル/HTTP.jl動作確認  
+❌ HTTP.listen() → main終了 → Docker停止 
+
+原因:「足掻いても現状だとRenderの起動・ヘルスチェックの条件をJulia側で満たせていないこと」
+
+**使用予算:$2.37 → トラブルシュートスキル習得**
+
 # GrowthTrail AI
 
 Julia + Flux.jl で、習慣・技術・ビジネスの成長度をスコアリングするシンプルな機械学習API。
@@ -21,19 +30,17 @@ GrowthTrail AI は、Julia と Flux.jl を用いて、自己評価やテキス�
 - HTTP.jl（REST APIサーバ）
 - JSON3.jl（JSONエンコード/デコード）
 - Ubuntu/Linux
-- Render.com（本番デプロイ）
 
 ## Live API（本番環境）
 
-**POST** `https://growthtrail-ai.onrender.com/predict`
+**POST** ``
 
-- Request / Response は JSON 形式 
-- Day3 時点で、Flux.jl + HTTP.jl + Render.com の無料デプロイまで完了しています。
+- Renderで失敗の為、次に向けて再構想中
 
 ## API エンドポイント
 
-本番環境（Render）にデプロイされた GrowthTrail AI のエンドポイント:
-- ベース URL: https://growthtrail-ai.onrender.com
+本番環境にデプロイされた GrowthTrail AI のエンドポイント:
+- ベース URL: 
 
 ### /predict
 
