@@ -1,8 +1,14 @@
-using HTTP
+using Sockets
 
-# Render PORT対応（デフォルト10000）
 port = parse(Int, get(ENV, "PORT", "10000"))
-println("Starting GrowthTrail on port $port")
+println("GrowthTrail minimal server on port $port")
 
-HTTP.listen("0.0.0.0", port) do req::HTTP.Request
-    HTTP.Response(200, "GrowthTrail Live! ✓")
+server = listen(IPv4(0, 0), port)
+
+while true
+    sock = accept(server)
+    @async begin
+        write(sock, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nGrowthTrail Live! ✓\r\n")
+        close(sock)
+    end
+end
