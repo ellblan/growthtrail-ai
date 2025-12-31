@@ -1,3 +1,5 @@
+# Test deploy
+
 **Julia+Flux → Render失敗記録**
 
 - Phase 0: Fluxモデル → "Application exited early" ❌
