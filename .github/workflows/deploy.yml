@@ -1,0 +1,35 @@
+name: Deploy Backend to Lightsail
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Copy backend files to Lightsail
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          source: "backend/*"
+          target: "~/growthtrail-ai/backend"
+
+      - name: Restart backend container
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            cd ~/growthtrail-ai/backend
+            docker-compose down
+            docker-compose up -d --build
+            sleep 3
+            curl -f http://localhost:8000/health || exit 1
