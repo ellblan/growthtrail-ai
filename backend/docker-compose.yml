@@ -1,0 +1,7 @@
+services:
+  backend:
+    build: .
+    container_name: growthtrail-backend
+    ports:
+      - "8081:8081"
+    restart: unless-stopped

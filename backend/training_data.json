@@ -1,0 +1,14 @@
+[
+  {
+    "text": "hello",
+    "positivity": 0.8,
+    "energy": 0.6,
+    "stress": 0.2
+  },
+  {
+    "text": "tired...",
+    "positivity": 0.2,
+    "energy": 0.3,
+    "stress": 0.7
+  }
+]
