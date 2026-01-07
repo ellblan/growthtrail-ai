@@ -1,1 +1,4 @@
 .julia/
+# Backend
+backend/Manifest.toml
+backend/.julia/
