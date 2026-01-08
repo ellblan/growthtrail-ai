@@ -29,7 +29,8 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
             cd ~/growthtrail-ai/backend
-            docker-compose down
-            docker-compose up -d --build
+            docker compose down
+            docker compose up -d --build
             sleep 3
             curl -f http://localhost:8000/health || exit 1
+
