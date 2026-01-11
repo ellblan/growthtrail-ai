@@ -17,7 +17,7 @@ function handle_options(req::HTTP.Request)
     return HTTP.Response(
         200,
         cors_headers(),
-        ""   # body
+        ""
     )
 end
 
@@ -47,11 +47,27 @@ function analyze(req::HTTP.Request)
     )
 end
 
+# -------------------------
+# 追加した /health エンドポイント
+# -------------------------
+function healthcheck(req::HTTP.Request)
+    return HTTP.Response(
+        200,
+        cors_headers(),
+        JSON.json(Dict("status" => "ok"))
+    )
+end
+
 HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
     if req.method == "OPTIONS"
         return handle_options(req)
+
+    elseif req.target == "/health" && req.method == "GET"
+        return healthcheck(req)
+
     elseif req.target == "/analyze" && req.method == "POST"
         return analyze(req)
+
     else
         return HTTP.Response(
             404,
