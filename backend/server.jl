@@ -87,6 +87,6 @@ HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
         return analyze(req)
 
     else
-        return HTTP.Response(404, cors_headers(), "Not Found")
+        return health_html(req)
     end
 end
