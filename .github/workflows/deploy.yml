@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           source: "./"
-          target: "~/growthtrail-ai"
+          target: "/home/ubuntu/growthtrail-ai"
 
       - name: Restart backend container (stable SSH)
         uses: appleboy/ssh-action@v0.1.7
@@ -30,7 +30,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd ~/growthtrail-ai
+            cd /home/ubuntu/growthtrail-ai/backend
 
             echo "Stopping old containers..."
             docker compose down || true
