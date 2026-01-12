@@ -21,7 +21,7 @@ RUN npm install
 RUN npm run build   # dist/ が生成される
 
 WORKDIR /app
-COPY --from=0 /app/frontend/dist ./dist
+COPY frontend/dist ./dist
 
 EXPOSE 8081
 
