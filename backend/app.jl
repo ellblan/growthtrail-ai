@@ -2,7 +2,6 @@ using HTTP
 using JSON
 using Gradio
 
-# backend の URL
 BACKEND_URL = "http://localhost:8081/analyze"
 
 function analyze_text(text)

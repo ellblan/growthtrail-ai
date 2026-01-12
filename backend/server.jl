@@ -14,11 +14,7 @@ function cors_headers()
 end
 
 function handle_options(req::HTTP.Request)
-    return HTTP.Response(
-        200,
-        cors_headers(),
-        ""
-    )
+    return HTTP.Response(200, cors_headers(), "")
 end
 
 function extract_features(text::String)
@@ -40,41 +36,57 @@ function analyze(req::HTTP.Request)
         )
     ))
 
-    return HTTP.Response(
-        200,
-        cors_headers(),
-        response_body
-    )
+    return HTTP.Response(200, cors_headers(), response_body)
 end
 
-# -------------------------
-# 追加した /health エンドポイント
-# -------------------------
-function healthcheck(req::HTTP.Request)
-    return HTTP.Response(
-        200,
-        cors_headers(),
-        JSON.json(Dict("status" => "ok"))
-    )
+function health_html(req::HTTP.Request)
+    html_path = joinpath(@__DIR__, "frontend/dist/index.html")
+
+    if !isfile(html_path)
+        return HTTP.Response(500, "index.html not found in frontend/dist/")
+    end
+
+    html = read(html_path, String)
+    return HTTP.Response(200, ["Content-Type" => "text/html"], html)
+end
+
+function static_file(req::HTTP.Request)
+    rel_path = req.target[2:end] 
+    file_path = joinpath(@__DIR__, "frontend/dist", rel_path)
+
+    if !isfile(file_path)
+        return nothing
+    end
+
+    content_type =
+        endswith(file_path, ".js")  ? "application/javascript" :
+        endswith(file_path, ".css") ? "text/css" :
+        endswith(file_path, ".svg") ? "image/svg+xml" :
+        endswith(file_path, ".png") ? "image/png" :
+        "application/octet-stream"
+
+    return HTTP.Response(200, ["Content-Type" => content_type], read(file_path))
 end
 
 HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
+
+    if startswith(req.target, "/assets/")
+        res = static_file(req)
+        if res !== nothing
+            return res
+        end
+    end
+
     if req.method == "OPTIONS"
         return handle_options(req)
 
     elseif req.target == "/health" && req.method == "GET"
-        return healthcheck(req)
+        return health_html(req)
 
     elseif req.target == "/analyze" && req.method == "POST"
         return analyze(req)
 
     else
-        return HTTP.Response(
-            404,
-            cors_headers(),
-            "Not Found"
-        )
+        return HTTP.Response(404, cors_headers(), "Not Found")
     end
 end
-# trigger deploy
-
