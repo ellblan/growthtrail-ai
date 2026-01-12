@@ -36,7 +36,7 @@ jobs:
             docker compose down || true
 
             echo "Rebuilding and starting containers..."
-            docker compose up -d --build --no-cache
+            docker compose up -d --build
 
             echo "Waiting for backend to boot..."
             sleep 5
