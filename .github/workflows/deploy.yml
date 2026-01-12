@@ -12,14 +12,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Copy backend files to Lightsail
+      - name: Copy entire project to Lightsail
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          source: "backend/*"
-          target: "~/growthtrail-ai/backend"
+          source: "./"
+          target: "~/growthtrail-ai"
 
       - name: Restart backend container (stable SSH)
         uses: appleboy/ssh-action@v0.1.7
@@ -30,7 +30,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd ~/growthtrail-ai/backend
+            cd ~/growthtrail-ai
 
             echo "Stopping old containers..."
             docker compose down || true
