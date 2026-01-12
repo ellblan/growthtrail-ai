@@ -1,45 +1,22 @@
-name: Deploy Backend to Lightsail
+- name: Restart backend container (stable SSH)
+  uses: appleboy/ssh-action@v0.1.7
+  with:
+    host: ${{ secrets.LIGHTSAIL_HOST }}
+    username: ${{ secrets.LIGHTSAIL_USER }}
+    key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+    script_stop: true
+    script: |
+      set -e
+      cd /home/ubuntu/growthtrail-ai
 
-on:
-  push:
-    branches: ["main"]
+      echo "Stopping old containers..."
+      docker compose down || true
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+      echo "Rebuilding and starting containers..."
+      docker compose up -d --build
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      echo "Waiting for backend to boot..."
+      sleep 5
 
-      - name: Copy entire project to Lightsail
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          source: "./"
-          target: "/home/ubuntu/growthtrail-ai"
-
-      - name: Restart backend container (stable SSH)
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -e
-            cd /home/ubuntu/growthtrail-ai/backend
-
-            echo "Stopping old containers..."
-            docker compose down || true
-
-            echo "Rebuilding and starting containers..."
-            docker compose up -d --build
-
-            echo "Waiting for backend to boot..."
-            sleep 5
-
-            echo "Health check..."
-            curl -f http://localhost:8081/health
+      echo "Health check..."
+      curl -f http://localhost:8081/health
