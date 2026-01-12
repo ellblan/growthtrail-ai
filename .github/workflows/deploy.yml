@@ -20,17 +20,26 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           source: "backend/*"
           target: "~/growthtrail-ai/backend"
-81
-      - name: Restart backend container
+
+      - name: Restart backend container (stable SSH)
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script_stop: true
           script: |
+            set -e
             cd ~/growthtrail-ai/backend
-            docker compose down
-            docker compose up -d --build --no-cache
-            sleep 3
-            curl -f http://localhost:8081/health || exit 1
 
+            echo "Stopping old containers..."
+            docker compose down || true
+
+            echo "Rebuilding and starting containers..."
+            docker compose up -d --build --no-cache
+
+            echo "Waiting for backend to boot..."
+            sleep 5
+
+            echo "Health check..."
+            curl -f http://localhost:8081/health
