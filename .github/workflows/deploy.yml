@@ -20,7 +20,7 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           source: "backend/*"
           target: "~/growthtrail-ai/backend"
-
+81
       - name: Restart backend container
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -32,5 +32,5 @@ jobs:
             docker compose down
             docker compose up -d --build
             sleep 3
-            curl -f http://localhost:8000/health || exit 1
+            curl -f http://localhost:8081/health || exit 1
 
