@@ -30,7 +30,7 @@ jobs:
           script: |
             cd ~/growthtrail-ai/backend
             docker compose down
-            docker compose up -d --build
+            docker compose up -d --build --no-cache
             sleep 3
             curl -f http://localhost:8081/health || exit 1
 
