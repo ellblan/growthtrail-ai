@@ -11,6 +11,7 @@ COPY backend/Project.toml .
 COPY backend/Manifest.toml .
 COPY backend/server.jl .
 COPY backend/model.bson .
+COPY backend/personality_skills_mapping.json .
 
 RUN julia -e 'using Pkg; Pkg.instantiate()'
 
