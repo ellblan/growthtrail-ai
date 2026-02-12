@@ -17,13 +17,17 @@ COPY backend/server.jl .
 COPY backend/model.bson .
 COPY backend/personality_skills_mapping.json .
 
-# Julia 依存解決（レジストリ 404 でもビルドを止めない）
+# Julia 依存解決（レジストリ 404 時は最小パッケージを個別インストール）
 RUN julia -e '\
     using Pkg; \
     try \
         Pkg.instantiate(); \
     catch e \
-        @warn "Pkg.instantiate() failed — skipping" exception=e \
+        @warn "Pkg.instantiate() failed — installing minimum packages" exception=e; \
+        Pkg.add("HTTP"); \
+        Pkg.add("JSON"); \
+        Pkg.add("Flux"); \
+        Pkg.precompile(); \
     end'
 
 # ── Frontend ───────────────────────────────────
