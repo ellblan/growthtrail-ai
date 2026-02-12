@@ -35,6 +35,6 @@ RUN npm run build
 
 WORKDIR /app
 
-EXPOSE 8081
+EXPOSE 8080
 
 CMD ["julia", "server.jl"]

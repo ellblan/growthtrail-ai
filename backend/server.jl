@@ -274,7 +274,7 @@ const API_ROUTES = Dict(
 # ─────────────────────────────────────────────
 # ルーティング
 # ─────────────────────────────────────────────
-HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
+HTTP.serve("0.0.0.0", 8080) do req::HTTP.Request
 
     # --- 静的ファイル配信 ---
     if startswith(req.target, "/assets/")

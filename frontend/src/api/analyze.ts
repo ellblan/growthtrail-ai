@@ -19,7 +19,7 @@ export type ConvertTraitsResponse = {
 }
 
 export async function analyzeText(text: string): Promise<AnalyzeResponse> {
-  const res = await fetch("http://localhost:8081/analyze", {
+  const res = await fetch("/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
@@ -33,7 +33,7 @@ export async function analyzeText(text: string): Promise<AnalyzeResponse> {
 }
 
 export async function convertTraits(traits: string[]): Promise<ConvertTraitsResponse> {
-  const res = await fetch("http://localhost:8081/traits/convert", {
+  const res = await fetch("/traits/convert", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ traits }),
