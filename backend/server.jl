@@ -258,10 +258,25 @@ function static_file(req::HTTP.Request)
 end
 
 # ─────────────────────────────────────────────
+# エラーレスポンス
+# ─────────────────────────────────────────────
+function json_error(status::Int, message::String)
+    body = JSON.json(Dict("error" => message))
+    return HTTP.Response(status, cors_headers(), body)
+end
+
+# 既知の API ルートとその許可メソッド
+const API_ROUTES = Dict(
+    "/analyze"        => "POST",
+    "/traits/convert" => "POST"
+)
+
+# ─────────────────────────────────────────────
 # ルーティング
 # ─────────────────────────────────────────────
 HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
 
+    # --- 静的ファイル配信 ---
     if startswith(req.target, "/assets/")
         res = static_file(req)
         if res !== nothing
@@ -269,19 +284,38 @@ HTTP.serve("0.0.0.0", 8081) do req::HTTP.Request
         end
     end
 
+    # --- CORS プリフライト ---
     if req.method == "OPTIONS"
         return handle_options(req)
+
+    # --- フロントエンド (SPA) ---
+    elseif req.target == "/" && req.method == "GET"
+        return health_html(req)
 
     elseif req.target == "/health" && req.method == "GET"
         return health_html(req)
 
+    # --- API エンドポイント ---
     elseif req.target == "/analyze" && req.method == "POST"
         return analyze(req)
 
     elseif req.target == "/traits/convert" && req.method == "POST"
         return convert_traits(req)
 
+    # --- メソッド不一致 (405) ---
+    elseif haskey(API_ROUTES, req.target)
+        allowed = API_ROUTES[req.target]
+        return HTTP.Response(405,
+            [cors_headers(); "Allow" => allowed],
+            JSON.json(Dict(
+                "error"   => "Method not allowed",
+                "allowed" => allowed,
+                "path"    => req.target
+            ))
+        )
+
+    # --- 未知のパス (404) ---
     else
-        return health_html(req)
+        return json_error(404, "Not found: $(req.target)")
     end
 end
