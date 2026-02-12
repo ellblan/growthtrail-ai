@@ -11,24 +11,19 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ── Backend ────────────────────────────────────
-COPY backend/Project.toml .
-COPY backend/Manifest.toml .
-COPY backend/server.jl .
-COPY backend/model.bson .
-COPY backend/personality_skills_mapping.json .
+COPY backend/Project.toml backend/Manifest.toml* ./
+COPY backend/server.jl backend/model.bson backend/personality_skills_mapping.json ./
 
-# Julia 依存解決（レジストリ 404 時は最小パッケージを個別インストール）
+# Julia 依存解決（Registry 完全オフライン対応）
+# pkg.julialang.org が 404 を返す場合でもビルドを止めないよう
+# GitHub リポジトリから直接インストールする
 RUN julia -e '\
     using Pkg; \
-    try \
-        Pkg.instantiate(); \
-    catch e \
-        @warn "Pkg.instantiate() failed — installing minimum packages" exception=e; \
-        Pkg.add("HTTP"); \
-        Pkg.add("JSON"); \
-        Pkg.add("Flux"); \
-        Pkg.precompile(); \
-    end'
+    ENV["JULIA_PKG_SERVER"] = ""; \
+    Pkg.add(url="https://github.com/JuliaWeb/HTTP.jl.git"); \
+    Pkg.add(url="https://github.com/JuliaIO/JSON.jl.git"); \
+    Pkg.add(url="https://github.com/FluxML/Flux.jl.git"); \
+    Pkg.precompile()'
 
 # ── Frontend ───────────────────────────────────
 COPY frontend ./frontend
