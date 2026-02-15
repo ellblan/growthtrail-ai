@@ -278,6 +278,20 @@ const API_ROUTES = Dict(
 )
 
 # ─────────────────────────────────────────────
+# メモリ管理（2GB Lightsail 安定稼働用）
+# ─────────────────────────────────────────────
+const REQUEST_COUNT = Ref(0)
+const GC_INTERVAL = 100  # N リクエストごとに GC
+
+function maybe_gc()
+    REQUEST_COUNT[] += 1
+    if REQUEST_COUNT[] % GC_INTERVAL == 0
+        GC.gc(false)  # incremental GC（フルGCは避ける）
+        @info "Periodic GC" requests=REQUEST_COUNT[] mem_mb=round(Sys.maxrss() / 1024^2, digits=1)
+    end
+end
+
+# ─────────────────────────────────────────────
 # ウォームアップ（JIT コンパイルを起動時に完了）
 # ─────────────────────────────────────────────
 function warmup()
@@ -294,7 +308,9 @@ function warmup()
     haskey(TRAIT_MAPPING, "慎重")
     get(TRAIT_MAPPING, "慎重", nothing)
 
-    @info "Warmup complete"
+    # ウォームアップ後にクリーンアップ
+    GC.gc()
+    @info "Warmup complete" mem_mb=round(Sys.maxrss() / 1024^2, digits=1)
 end
 
 warmup()
@@ -304,12 +320,14 @@ warmup()
 # ─────────────────────────────────────────────
 HTTP.serve("0.0.0.0", 8080) do req::HTTP.Request
 
+    maybe_gc()
+
     # --- 静的ファイル配信（メモリキャッシュ） ---
     if startswith(req.target, "/assets/")
         entry = get(STATIC_CACHE, req.target, nothing)
         if entry !== nothing
-            ct, data = entry
-            return HTTP.Response(200, ["Content-Type" => ct], data)
+            ct, bytes = entry
+            return HTTP.Response(200, ["Content-Type" => ct], bytes)
         end
     end
 

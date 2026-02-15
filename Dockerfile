@@ -11,7 +11,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ── Backend ────────────────────────────────────
-COPY backend/server.jl backend/model.bson backend/personality_skills_mapping.json ./
+# model.bson は server.jl で未使用のためコピーしない（メモリ節約）
+COPY backend/server.jl backend/personality_skills_mapping.json ./
 
 # Julia 依存解決
 # 1) Registry を shallow clone（full clone は ~700MB でハングする）
@@ -37,4 +38,8 @@ WORKDIR /app
 
 EXPOSE 8080
 
-CMD ["julia", "server.jl"]
+# Julia GC を 2GB 環境に最適化
+# --heap-size-hint: GC がこのサイズ付近でアグレッシブに回収
+ENV JULIA_NUM_THREADS=1
+
+CMD ["julia", "--heap-size-hint=512M", "server.jl"]
