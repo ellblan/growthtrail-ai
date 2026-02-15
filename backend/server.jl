@@ -5,19 +5,61 @@ using HTTP
 using JSON
 
 # ─────────────────────────────────────────────
-# CORS
+# CORS（const で 1 回だけ生成）
 # ─────────────────────────────────────────────
-function cors_headers()
-    return [
-        "Access-Control-Allow-Origin" => "*",
-        "Access-Control-Allow-Headers" => "Content-Type, Authorization",
-        "Access-Control-Allow-Methods" => "GET, POST, OPTIONS",
-        "Access-Control-Max-Age" => "86400"
-    ]
-end
+const CORS_HEADERS = [
+    "Access-Control-Allow-Origin" => "*",
+    "Access-Control-Allow-Headers" => "Content-Type, Authorization",
+    "Access-Control-Allow-Methods" => "GET, POST, OPTIONS",
+    "Access-Control-Max-Age" => "86400"
+]
+
+const CORS_PREFLIGHT_RESPONSE = HTTP.Response(200, CORS_HEADERS, "")
 
 function handle_options(req::HTTP.Request)
-    return HTTP.Response(200, cors_headers(), "")
+    return CORS_PREFLIGHT_RESPONSE
+end
+
+# ─────────────────────────────────────────────
+# 静的ファイルキャッシュ（起動時に全てメモリ展開）
+# ─────────────────────────────────────────────
+const STATIC_CACHE = Dict{String, Tuple{String, Vector{UInt8}}}()
+
+function cache_static_files()
+    dist_dir = joinpath(@__DIR__, "frontend", "dist")
+    if !isdir(dist_dir)
+        @warn "frontend/dist not found — static cache empty"
+        return
+    end
+
+    for (root, dirs, files) in walkdir(dist_dir)
+        for file in files
+            full = joinpath(root, file)
+            rel  = "/" * relpath(full, dist_dir)
+            ct   = endswith(file, ".js")   ? "application/javascript" :
+                   endswith(file, ".css")  ? "text/css" :
+                   endswith(file, ".svg")  ? "image/svg+xml" :
+                   endswith(file, ".png")  ? "image/png" :
+                   endswith(file, ".html") ? "text/html" :
+                   endswith(file, ".ico")  ? "image/x-icon" :
+                   endswith(file, ".json") ? "application/json" :
+                   "application/octet-stream"
+            STATIC_CACHE[rel] = (ct, read(full))
+        end
+    end
+    @info "Static cache loaded" files=length(STATIC_CACHE)
+end
+
+cache_static_files()
+
+# index.html をキャッシュから取得（毎回ディスク読み不要）
+const INDEX_HTML = let
+    entry = get(STATIC_CACHE, "/index.html", nothing)
+    if entry !== nothing
+        HTTP.Response(200, ["Content-Type" => "text/html"], entry[2])
+    else
+        HTTP.Response(500, ["Content-Type" => "text/plain"], "index.html not found")
+    end
 end
 
 # ─────────────────────────────────────────────
@@ -73,7 +115,6 @@ function call_claude_api(prompt::String)
             readtimeout=30
         )
         data = JSON.parse(String(resp.body))
-        # Messages API のレスポンスから text を抽出
         content_blocks = get(data, "content", [])
         if !isempty(content_blocks)
             return get(content_blocks[1], "text", "")
@@ -117,7 +158,6 @@ function parse_claude_reasons(raw_text::String, converted::Vector{Dict{String,An
             end
         end
     catch
-        # パース失敗時は空の Dict を返す
     end
     return reasons
 end
@@ -130,22 +170,21 @@ function convert_traits(req::HTTP.Request)
     try
         data = JSON.parse(String(req.body))
     catch
-        error_body = JSON.json(Dict("error" => "Invalid JSON in request body"))
-        return HTTP.Response(400, cors_headers(), error_body)
+        return HTTP.Response(400, CORS_HEADERS,
+            JSON.json(Dict("error" => "Invalid JSON in request body")))
     end
 
     traits = get(data, "traits", nothing)
     if traits === nothing || !isa(traits, Vector)
-        error_body = JSON.json(Dict("error" => "\"traits\" must be a JSON array of strings"))
-        return HTTP.Response(400, cors_headers(), error_body)
+        return HTTP.Response(400, CORS_HEADERS,
+            JSON.json(Dict("error" => "\"traits\" must be a JSON array of strings")))
     end
 
     if isempty(traits)
-        error_body = JSON.json(Dict("error" => "\"traits\" array must not be empty"))
-        return HTTP.Response(400, cors_headers(), error_body)
+        return HTTP.Response(400, CORS_HEADERS,
+            JSON.json(Dict("error" => "\"traits\" array must not be empty")))
     end
 
-    # 特性 → スキル変換
     converted = Dict{String,Any}[]
     not_found = String[]
     for trait in traits
@@ -165,11 +204,8 @@ function convert_traits(req::HTTP.Request)
     end
 
     if isempty(converted)
-        error_body = JSON.json(Dict(
-            "error" => "No matching traits found",
-            "not_found" => not_found
-        ))
-        return HTTP.Response(404, cors_headers(), error_body)
+        return HTTP.Response(404, CORS_HEADERS,
+            JSON.json(Dict("error" => "No matching traits found", "not_found" => not_found)))
     end
 
     # Claude API で理由を生成
@@ -180,7 +216,6 @@ function convert_traits(req::HTTP.Request)
         reasons = parse_claude_reasons(raw_response, converted)
     end
 
-    # レスポンス構築
     skills = []
     for item in converted
         skill_entry = Dict{String,Any}(
@@ -200,7 +235,7 @@ function convert_traits(req::HTTP.Request)
         response["not_found"] = not_found
     end
 
-    return HTTP.Response(200, cors_headers(), JSON.json(response))
+    return HTTP.Response(200, CORS_HEADERS, JSON.json(response))
 end
 
 # ─────────────────────────────────────────────
@@ -225,36 +260,7 @@ function analyze(req::HTTP.Request)
         )
     ))
 
-    return HTTP.Response(200, cors_headers(), response_body)
-end
-
-function health_html(req::HTTP.Request)
-    html_path = joinpath(@__DIR__, "frontend/dist/index.html")
-
-    if !isfile(html_path)
-        return HTTP.Response(500, "index.html not found in frontend/dist/")
-    end
-
-    html = read(html_path, String)
-    return HTTP.Response(200, ["Content-Type" => "text/html"], html)
-end
-
-function static_file(req::HTTP.Request)
-    rel_path = req.target[2:end]
-    file_path = joinpath(@__DIR__, "frontend/dist", rel_path)
-
-    if !isfile(file_path)
-        return nothing
-    end
-
-    content_type =
-        endswith(file_path, ".js")  ? "application/javascript" :
-        endswith(file_path, ".css") ? "text/css" :
-        endswith(file_path, ".svg") ? "image/svg+xml" :
-        endswith(file_path, ".png") ? "image/png" :
-        "application/octet-stream"
-
-    return HTTP.Response(200, ["Content-Type" => content_type], read(file_path))
+    return HTTP.Response(200, CORS_HEADERS, response_body)
 end
 
 # ─────────────────────────────────────────────
@@ -262,7 +268,7 @@ end
 # ─────────────────────────────────────────────
 function json_error(status::Int, message::String)
     body = JSON.json(Dict("error" => message))
-    return HTTP.Response(status, cors_headers(), body)
+    return HTTP.Response(status, CORS_HEADERS, body)
 end
 
 # 既知の API ルートとその許可メソッド
@@ -272,15 +278,38 @@ const API_ROUTES = Dict(
 )
 
 # ─────────────────────────────────────────────
+# ウォームアップ（JIT コンパイルを起動時に完了）
+# ─────────────────────────────────────────────
+function warmup()
+    @info "Running warmup..."
+
+    # JSON のシリアライズ / デシリアライズをウォームアップ
+    JSON.json(Dict("warmup" => true))
+    JSON.parse("{\"warmup\":true}")
+
+    # extract_features のコンパイル
+    extract_features("warmup")
+
+    # Dict 操作のコンパイル
+    haskey(TRAIT_MAPPING, "慎重")
+    get(TRAIT_MAPPING, "慎重", nothing)
+
+    @info "Warmup complete"
+end
+
+warmup()
+
+# ─────────────────────────────────────────────
 # ルーティング
 # ─────────────────────────────────────────────
 HTTP.serve("0.0.0.0", 8080) do req::HTTP.Request
 
-    # --- 静的ファイル配信 ---
+    # --- 静的ファイル配信（メモリキャッシュ） ---
     if startswith(req.target, "/assets/")
-        res = static_file(req)
-        if res !== nothing
-            return res
+        entry = get(STATIC_CACHE, req.target, nothing)
+        if entry !== nothing
+            ct, data = entry
+            return HTTP.Response(200, ["Content-Type" => ct], data)
         end
     end
 
@@ -290,10 +319,10 @@ HTTP.serve("0.0.0.0", 8080) do req::HTTP.Request
 
     # --- フロントエンド (SPA) ---
     elseif req.target == "/" && req.method == "GET"
-        return health_html(req)
+        return INDEX_HTML
 
     elseif req.target == "/health" && req.method == "GET"
-        return health_html(req)
+        return INDEX_HTML
 
     # --- API エンドポイント ---
     elseif req.target == "/analyze" && req.method == "POST"
@@ -306,7 +335,7 @@ HTTP.serve("0.0.0.0", 8080) do req::HTTP.Request
     elseif haskey(API_ROUTES, req.target)
         allowed = API_ROUTES[req.target]
         return HTTP.Response(405,
-            [cors_headers(); "Allow" => allowed],
+            [CORS_HEADERS; "Allow" => allowed],
             JSON.json(Dict(
                 "error"   => "Method not allowed",
                 "allowed" => allowed,

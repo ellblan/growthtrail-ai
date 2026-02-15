@@ -22,7 +22,10 @@ RUN git clone --depth 1 https://github.com/JuliaRegistries/General.git \
     julia -e '\
         using Pkg; \
         Pkg.add(["HTTP", "JSON"]); \
-        Pkg.precompile()'
+        Pkg.precompile()' && \
+    julia -e '\
+        using HTTP; using JSON; \
+        println("✓ using warmup OK")'
 
 # ── Frontend ───────────────────────────────────
 COPY frontend ./frontend
