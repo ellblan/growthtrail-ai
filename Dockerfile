@@ -11,21 +11,20 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ── Backend ────────────────────────────────────
-# model.bson は server.jl で未使用のためコピーしない（メモリ節約）
-COPY backend/server.jl backend/personality_skills_mapping.json ./
+COPY backend/server.jl backend/model.bson backend/personality_skills_mapping.json ./
 
 # Julia 依存解決
 # 1) Registry を shallow clone（full clone は ~700MB でハングする）
-# 2) server.jl の実行に必要な HTTP + JSON のみインストール
-#    Flux は train.jl 用のため Docker ランタイムでは不要
+# 2) HTTP, JSON: API サーバー用
+# 3) Flux, BSON: モデルロード + CPU 推論用（CUDA 不要）
 RUN git clone --depth 1 https://github.com/JuliaRegistries/General.git \
         /root/.julia/registries/General && \
     julia -e '\
         using Pkg; \
-        Pkg.add(["HTTP", "JSON"]); \
+        Pkg.add(["HTTP", "JSON", "Flux", "BSON"]); \
         Pkg.precompile()' && \
     julia -e '\
-        using HTTP; using JSON; \
+        using HTTP; using JSON; using Flux; using BSON; \
         println("✓ using warmup OK")'
 
 # ── Frontend ───────────────────────────────────
@@ -39,7 +38,8 @@ WORKDIR /app
 EXPOSE 8080
 
 # Julia GC を 2GB 環境に最適化
+# Flux ロード後の安定メモリ: ~700-800MB
 # --heap-size-hint: GC がこのサイズ付近でアグレッシブに回収
 ENV JULIA_NUM_THREADS=1
 
-CMD ["julia", "--heap-size-hint=512M", "server.jl"]
+CMD ["julia", "--heap-size-hint=800M", "server.jl"]

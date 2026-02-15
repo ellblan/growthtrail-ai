@@ -3,6 +3,8 @@ Pkg.activate(@__DIR__)
 
 using HTTP
 using JSON
+using Flux
+using BSON: @load
 
 # ─────────────────────────────────────────────
 # CORS（const で 1 回だけ生成）
@@ -61,6 +63,26 @@ const INDEX_HTML = let
         HTTP.Response(500, ["Content-Type" => "text/plain"], "index.html not found")
     end
 end
+
+# ─────────────────────────────────────────────
+# Flux モデルのロード（CPU 推論専用）
+# ─────────────────────────────────────────────
+const MODEL_PATH = joinpath(@__DIR__, "model.bson")
+
+function load_model()
+    if !isfile(MODEL_PATH)
+        @warn "model.bson not found — extract_features will use fallback"
+        return nothing
+    end
+
+    @load MODEL_PATH model
+    Flux.testmode!(model)
+    GC.gc()
+    @info "Flux model loaded (CPU)" path=MODEL_PATH mem_mb=round(Sys.maxrss() / 1024^2, digits=1)
+    return model
+end
+
+const MODEL = load_model()
 
 # ─────────────────────────────────────────────
 # 特性 → ビジネススキル マッピング辞書のロード
@@ -239,10 +261,17 @@ function convert_traits(req::HTTP.Request)
 end
 
 # ─────────────────────────────────────────────
-# 既存エンドポイント
+# /analyze エンドポイント（Flux 実推論）
 # ─────────────────────────────────────────────
+
+# train.jl の入力形式: Float32[length(text)]  → 出力: 3値 (positivity, energy, stress)
 function extract_features(text::String)
-    return [0.5, 0.3, 0.8]
+    if MODEL === nothing
+        return Float32[0.5, 0.3, 0.8]
+    end
+    input = Float32[length(text)]
+    output = MODEL(input)
+    return Float32.(output)
 end
 
 function analyze(req::HTTP.Request)
@@ -281,12 +310,12 @@ const API_ROUTES = Dict(
 # メモリ管理（2GB Lightsail 安定稼働用）
 # ─────────────────────────────────────────────
 const REQUEST_COUNT = Ref(0)
-const GC_INTERVAL = 100  # N リクエストごとに GC
+const GC_INTERVAL = 50  # Flux 使用時は頻度を上げる
 
 function maybe_gc()
     REQUEST_COUNT[] += 1
     if REQUEST_COUNT[] % GC_INTERVAL == 0
-        GC.gc(false)  # incremental GC（フルGCは避ける）
+        GC.gc(false)
         @info "Periodic GC" requests=REQUEST_COUNT[] mem_mb=round(Sys.maxrss() / 1024^2, digits=1)
     end
 end
@@ -297,18 +326,17 @@ end
 function warmup()
     @info "Running warmup..."
 
-    # JSON のシリアライズ / デシリアライズをウォームアップ
+    # JSON のシリアライズ / デシリアライズ
     JSON.json(Dict("warmup" => true))
     JSON.parse("{\"warmup\":true}")
 
-    # extract_features のコンパイル
-    extract_features("warmup")
+    # Flux 推論パスを JIT コンパイル
+    extract_features("warmup text for JIT compilation")
 
-    # Dict 操作のコンパイル
+    # Dict 操作
     haskey(TRAIT_MAPPING, "慎重")
     get(TRAIT_MAPPING, "慎重", nothing)
 
-    # ウォームアップ後にクリーンアップ
     GC.gc()
     @info "Warmup complete" mem_mb=round(Sys.maxrss() / 1024^2, digits=1)
 end
