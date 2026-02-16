@@ -28,6 +28,7 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script_stop: true
+          command_timeout: 10m
           script: |
             set -e
             cd /home/ubuntu/growthtrail-ai
@@ -38,8 +39,16 @@ jobs:
             echo "Rebuilding and starting containers..."
             docker compose up -d --build
 
-            echo "Waiting for backend to boot..."
-            sleep 5
+            echo "Waiting for Flux JIT compilation (~300s)..."
+            for i in $(seq 1 30); do
+              if curl -sf -m 5 http://localhost:8080/health > /dev/null 2>&1; then
+                echo "Backend healthy (attempt ${i}/30)"
+                exit 0
+              fi
+              echo "Not ready yet (attempt ${i}/30), waiting 10s..."
+              sleep 10
+            done
 
-            echo "Health check..."
-            curl -f http://localhost:8081/health
+            echo "Backend failed to start. Container logs:"
+            docker logs growthtrail-app --tail 50
+            exit 1
